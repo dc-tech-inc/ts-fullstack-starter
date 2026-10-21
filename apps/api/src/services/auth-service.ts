@@ -28,7 +28,9 @@ export type AuthService = ReturnType<typeof createAuthService>;
 
 export function createAuthService(db: Database) {
   // Verified against when the email is unknown, so both login failure paths cost one argon2 verify.
-  let dummyHash: Promise<string> | undefined;
+  // Built up front so even the first unknown-email login after startup takes the same time.
+  const dummyHash = hashPassword(randomBytes(16).toString("hex"));
+  dummyHash.catch(() => {}); // a failure surfaces on the login that awaits it, not as an unhandled rejection
 
   return {
     async register({ email, password }: Credentials): Promise<PublicUser> {
@@ -45,7 +47,6 @@ export function createAuthService(db: Database) {
     async login({ email, password }: Credentials): Promise<PublicUser> {
       const [user] = await db.select().from(users).where(eq(users.email, email));
       if (!user) {
-        dummyHash ??= hashPassword(randomBytes(16).toString("hex"));
         await verifyPassword(await dummyHash, password);
         throw invalidCredentials();
       }
