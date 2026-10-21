@@ -1,9 +1,11 @@
 import type { Task } from "@app/shared";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../../api/client";
 
 type Filter = "all" | "open" | "done";
 const FILTER_QUERY: Record<Filter, { done?: boolean }> = { all: {}, open: { done: false }, done: { done: true } };
+
+const messageOf = (err: unknown) => (err instanceof ApiError ? err.message : "Could not reach the server");
 
 export function TaskList() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -11,46 +13,48 @@ export function TaskList() {
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Bumped after every mutation to refetch the list from the server.
+  const [version, setVersion] = useState(0);
 
-  const run = useCallback(async (action: () => Promise<void>) => {
+  useEffect(() => {
+    // Ignore responses that arrive after the filter changed or the component unmounted.
+    let stale = false;
+    api.listTasks(FILTER_QUERY[filter]).then(
+      (list) => {
+        if (stale) return;
+        setTasks(list);
+        setLoading(false);
+      },
+      (err: unknown) => {
+        if (stale) return;
+        setError(messageOf(err));
+        setLoading(false);
+      },
+    );
+    return () => {
+      stale = true;
+    };
+  }, [filter, version]);
+
+  async function mutate(action: () => Promise<unknown>) {
     setError(null);
     try {
       await action();
+      setVersion((v) => v + 1);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not reach the server");
+      setError(messageOf(err));
     }
-  }, []);
-
-  const reload = useCallback(
-    () =>
-      run(async () => {
-        setTasks(await api.listTasks(FILTER_QUERY[filter]));
-      }).finally(() => setLoading(false)),
-    [filter, run],
-  );
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  }
 
   const add = (event: FormEvent) => {
     event.preventDefault();
-    void run(async () => {
+    void mutate(async () => {
       await api.createTask({ title });
       setTitle("");
-      await reload();
     });
   };
-  const toggle = (task: Task) =>
-    run(async () => {
-      await api.updateTask(task.id, { done: !task.done });
-      await reload();
-    });
-  const remove = (task: Task) =>
-    run(async () => {
-      await api.deleteTask(task.id);
-      await reload();
-    });
+  const toggle = (task: Task) => mutate(() => api.updateTask(task.id, { done: !task.done }));
+  const remove = (task: Task) => mutate(() => api.deleteTask(task.id));
 
   return (
     <section className="card">
