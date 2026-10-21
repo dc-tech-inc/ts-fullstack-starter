@@ -31,6 +31,12 @@ describe("task inputs", () => {
     expect(CreateTaskInput.safeParse({ title: "x".repeat(201) }).success).toBe(false);
   });
 
+  it("rejects NUL characters, which PostgreSQL text cannot store", () => {
+    expect(CreateTaskInput.safeParse({ title: "a\u0000b" }).success).toBe(false);
+    expect(UpdateTaskInput.safeParse({ title: "a\u0000b" }).success).toBe(false);
+    expect(CreateTaskInput.safeParse({ title: "a0000b" }).success).toBe(true);
+  });
+
   it("requires at least one field on update", () => {
     expect(UpdateTaskInput.safeParse({}).success).toBe(false);
     expect(UpdateTaskInput.safeParse({ done: true }).success).toBe(true);

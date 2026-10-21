@@ -1,6 +1,12 @@
 import * as z from "zod";
 
-const title = z.string().trim().min(1).max(200);
+// PostgreSQL text cannot store NUL (0x00); reject it here so it is a 400, not a 500 from the driver.
+const title = z
+  .string()
+  .trim()
+  .min(1)
+  .max(200)
+  .refine((value) => !value.includes("\u0000"), { error: "Title must not contain NUL characters" });
 
 export const Task = z
   .object({

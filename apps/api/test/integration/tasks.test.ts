@@ -65,6 +65,8 @@ describeDb("tasks (Postgres)", () => {
     for (const res of [
       await agent.post("/api/tasks").send({ title: "" }),
       await agent.post("/api/tasks").send({ title: "x".repeat(201) }),
+      await agent.post("/api/tasks").send({ title: "a\u0000b" }),
+      await agent.patch(`/api/tasks/${body.task.id}`).send({ title: "a\u0000b" }),
       await agent.patch(`/api/tasks/${body.task.id}`).send({}),
       await agent.patch(`/api/tasks/${body.task.id}`).send({ done: "yes" }),
       await agent.patch("/api/tasks/not-a-uuid").send({ done: true }),
