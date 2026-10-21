@@ -130,6 +130,7 @@ Every error has the same shape:
 ## Limitations
 
 - No email verification and no password reset.
+- Registration reveals whether an email already has an account (409 `Email is already registered`). Login does not, and both endpoints share the 10-per-15-minutes rate limit; hiding it fully would need email-based sign-up.
 - No CSRF token. Protection relies on `SameSite=Lax` cookies plus JSON-only endpoints; add a token if the API is ever served cross-site.
 - The rate limiter keeps counts in memory, per process. Several instances need a shared store. Behind a reverse proxy, set Express `trust proxy` correctly or every client shares the proxy's IP.
 - `helmet()` runs with its defaults. The API only serves JSON, so its Content-Security-Policy does not protect the web app; set CSP on whatever serves `apps/web/dist`.
