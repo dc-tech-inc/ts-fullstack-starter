@@ -1,6 +1,6 @@
 import { tasks, type Database, type TaskRow } from "@app/db";
 import type { Task, UpdateTaskInput } from "@app/shared";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 export const toTaskDto = (row: TaskRow): Task => ({
   id: row.id,
@@ -35,7 +35,8 @@ export function createTaskService(db: Database) {
     async update(userId: string, id: string, patch: UpdateTaskInput): Promise<Task | null> {
       const [row] = await db
         .update(tasks)
-        .set({ ...patch, updatedAt: new Date() })
+        // Database clock, same source as the created_at default, so timestamps never go backwards.
+        .set({ ...patch, updatedAt: sql`now()` })
         .where(owned(userId, id))
         .returning();
       return row ? toTaskDto(row) : null;
