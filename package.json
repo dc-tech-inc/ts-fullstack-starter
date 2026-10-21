@@ -17,5 +17,16 @@
     "test:coverage": "vitest run --coverage",
     "db:generate": "pnpm --filter @app/db generate",
     "db:migrate": "pnpm --filter @app/db migrate"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.13.0",
+    "globals": "17.13.0",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0",
+    "vitest": "5.0.5"
   }
 }
