@@ -1,4 +1,5 @@
 import type { ErrorCode, ErrorResponse } from "@app/shared";
+import { DrizzleQueryError } from "drizzle-orm";
 import type { ErrorRequestHandler } from "express";
 import * as z from "zod";
 import type { Logger } from "../logger.js";
@@ -42,11 +43,25 @@ export function toErrorResponse(err: unknown): { status: number; body: ErrorResp
   return reply(500, "INTERNAL", "Internal server error");
 }
 
+/**
+ * Drizzle puts the bound parameters (emails, password hashes, task titles) into its error message and
+ * stack. Log the SQL text and the driver error instead, so user data never reaches the logs.
+ */
+export function loggableError(err: unknown): unknown {
+  if (!(err instanceof DrizzleQueryError)) return err;
+  const cause = err.cause as (Error & { code?: string }) | undefined;
+  return {
+    type: err.name,
+    query: err.query,
+    cause: cause && { type: cause.name, code: cause.code, message: cause.message, stack: cause.stack },
+  };
+}
+
 /** Last middleware in the chain. 5xx details go to the log only; the client gets a generic message. */
 export function errorHandler(logger: Logger): ErrorRequestHandler {
   return (err, req, res, _next) => {
     const { status, body } = toErrorResponse(err);
-    if (status >= 500) (req.log ?? logger).error({ err }, "unhandled error");
+    if (status >= 500) (req.log ?? logger).error({ err: loggableError(err) }, "unhandled error");
     res.status(status).json(body);
   };
 }

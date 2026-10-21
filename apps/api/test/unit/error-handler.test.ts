@@ -1,5 +1,7 @@
 import { CreateTaskInput } from "@app/shared";
+import { DrizzleQueryError } from "drizzle-orm";
 import express from "express";
+import { pino } from "pino";
 import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import type { Logger } from "../../src/logger.js";
@@ -63,6 +65,26 @@ describe("errorHandler", () => {
     expect(res.body).toEqual({ error: { code: "INTERNAL", message: "Internal server error" } });
     expect(JSON.stringify(res.body)).not.toMatch(/secrets|at /);
     expect(logger.error).toHaveBeenCalledOnce();
+  });
+
+  it("logs database errors without the bound parameters", async () => {
+    const lines: string[] = [];
+    const logger = pino({}, { write: (line: string) => void lines.push(line) });
+    const driverError = Object.assign(new Error("duplicate key value violates unique constraint"), { code: "23505" });
+    const queryError = new DrizzleQueryError(
+      'insert into "users" ("email", "password_hash") values ($1, $2)',
+      ["ada@example.com", "$argon2id$v=19$m=19456,p=1,t=2$c2FsdA$aGFzaA"],
+      driverError,
+    );
+
+    await request(appThatThrows(queryError, logger)).get("/boom").expect(500);
+
+    expect(lines).toHaveLength(1);
+    const log = lines[0] ?? "";
+    expect(log).toContain('insert into \\"users\\"');
+    expect(log).toContain("23505");
+    expect(log).not.toContain("ada@example.com");
+    expect(log).not.toContain("$argon2id");
   });
 
   it("does not log expected 4xx errors", async () => {
