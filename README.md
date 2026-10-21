@@ -122,7 +122,7 @@ Every error has the same shape:
 - **One shared zod package.** Request validation, client types and the OpenAPI document come from the same schemas, so they cannot drift. The web app imports only types from it, so zod is not in the browser bundle.
 - **404, not 403, for other users' tasks.** Every task query is scoped by `user_id`, so a task you do not own is indistinguishable from one that does not exist.
 - **Plain Drizzle queries.** No repository layer or ORM relations magic: services call the query builder directly, and the SQL migration is generated and committed so it can be reviewed.
-- **Database clock for timestamps.** `created_at` and `updated_at` both come from Postgres `now()`. An early version set `updated_at` from the Node clock, and the integration tests caught it going backwards relative to `created_at` when the two clocks disagreed.
+- **Database clock for timestamps.** `created_at` and `updated_at` both come from Postgres `now()`. Setting `updated_at` from the Node clock instead was found to let it fall behind `created_at` when the app and database clocks disagree; this came up while writing the integration tests.
 - **Express 5 async errors.** Handlers are plain `async` functions; Express 5 forwards rejected promises to the error handler, so there is no wrapper library.
 - **`createApp(deps)` without `listen`.** Tests build the app with a real or stub database and drive it with supertest; `server.ts` only wires env, the pool and signal handling (SIGINT/SIGTERM close the HTTP server, then the pool).
 - **Rate limits.** 300 requests per 15 minutes per IP globally, 10 per 15 minutes on register and login. `/health` and `/openapi.json` are not limited.
