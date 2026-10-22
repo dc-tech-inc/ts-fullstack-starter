@@ -84,10 +84,10 @@ What the tests cover (66 tests; numbers from the last local run on 2026-10-21):
 
 - **shared** (10): email normalization, password and title limits (including NUL characters), the `done` query filter, the error-code enum.
 - **api unit** (29, no database): argon2id parameters, token generation and hashing, expiry boundary, error envelope mapping (zod, body-parser, unknown errors never leak), database errors logged without their SQL parameters, env parsing, cookie parsing, `/health` returning 503 when the database is down, every route present in `/openapi.json`, security headers, CORS, global rate limit.
-- **api integration** (17, real Postgres): register → me → logout → session gone; login stores only the token hash; duplicate email 409 (case-insensitive); wrong password and unknown email return the same 401; expired session rejected and deleted; credential validation; `Secure` cookie flag; login rate limit returns 429 on the 11th attempt; task CRUD and filtering; **user B does not see user A's task in the list and gets 404 on update and delete**; input validation 400s; cascade delete.
+- **api integration** (17, real Postgres): register → me → logout → session gone; login stores only the token hash; duplicate email 409 (case-insensitive); wrong password and unknown email return the same 401; expired session rejected and deleted; credential validation; `Secure` cookie flag; login rate limit returns 429 on the 11th attempt; task CRUD and filtering; user B does not see user A's task in the list and gets 404 on update and delete; input validation 400s; cascade delete.
 - **web** (10, jsdom): the API client (request shape, 204, typed `ApiError`, non-JSON errors) and the task list component (render, create, filter, toggle, delete, error display).
 
-Measured coverage of `apps/api/src` (`pnpm test:coverage` with Postgres): **91.5% lines, 91.4% statements, 92.1% branches, 90.9% functions**. The uncovered part is mostly `server.ts` (process entrypoint: listen and signal handling), which the tests do not start.
+Measured coverage of `apps/api/src` (`pnpm test:coverage` with Postgres): 91.5% lines, 91.4% statements, 92.1% branches, 90.9% functions. The uncovered part is mostly `server.ts` (process entrypoint: listen and signal handling), which the tests do not start.
 
 ## API
 
